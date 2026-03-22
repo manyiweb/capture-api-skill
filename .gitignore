@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Database
+capture.db
+*.db
+
+# Output
+tests/output/
+output/*.py
+output/*.yaml
+!output/.gitkeep
+
+# Logs
+*.log
