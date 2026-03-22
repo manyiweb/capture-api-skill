@@ -28,3 +28,15 @@ output/*.yaml
 
 # Logs
 *.log
+
+# Environment variables
+.env
+.env.*
+
+# macOS
+.DS_Store
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
