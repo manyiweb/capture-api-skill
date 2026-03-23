@@ -55,10 +55,10 @@ mitmdump -s mitm_script.py --listen-port 8080
 ========================================
 
 [信息] 启动代理服务器...
-[信息] 监听地址: localhost:8080
+[信息] 监听地址: localhost:18527
 [信息] 数据库: D:\capture-api-skill\capture.db
 
-[提示] 请配置浏览器代理为 localhost:8080
+[提示] 请配置浏览器代理为 localhost:18527
 [提示] 按 Ctrl+C 停止捕获
 
 ========================================
@@ -77,13 +77,13 @@ mitmdump -s mitm_script.py --listen-port 8080
 1. 打开设置 → 系统 → 打开代理设置
 2. 手动代理配置：
    - HTTP 代理：`localhost`
-   - 端口：`8080`
+   - 端口：`18527`
 3. 保存设置
 
 ### Firefox
 
 1. 设置 → 网络设置 → 手动代理配置
-2. HTTP 代理：`localhost`，端口：`8080`
+2. HTTP 代理：`localhost`，端口：`18527`
 3. 勾选"也将此代理用于 HTTPS"
 
 ---

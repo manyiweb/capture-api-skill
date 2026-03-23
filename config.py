@@ -5,8 +5,8 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent
 OUTPUT_DIR = BASE_DIR / "output"
 DEFAULT_DB_PATH = BASE_DIR / "capture.db"
-DEFAULT_PROXY_PORT = 8080
-DEFAULT_WEB_PORT = 8888
+DEFAULT_PROXY_PORT = 18527  # 使用不常见的端口避免冲突
+DEFAULT_WEB_PORT = 18528     # Web UI 端口
 
 # 输出子目录
 API_OUTPUT_DIR = OUTPUT_DIR / "api"
