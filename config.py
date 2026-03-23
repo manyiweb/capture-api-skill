@@ -20,10 +20,10 @@ EXCLUDED_KEYWORDS = {'analytics', 'sentry', 'track', 'log', 'metrics'}
 
 # 动态值识别
 DYNAMIC_FIELD_PATTERNS = [
-    r'[a-z]*[iI]d$',           # id, Id, tokenId
-    r'[a-z]*[tT]ime$',         # time, timestamp
-    r'[a-z]*[nN]o$',           # no, orderNo
-    r'[a-z]*[sS]ign$',         # sign, signature
+    r'.*[iI]d$',               # id, Id, tokenId, user_id
+    r'.*[tT]ime.*',            # time, timestamp, createTime
+    r'.*[nN]o$',               # no, orderNo
+    r'.*[sS]ign.*',            # sign, signature
     r'^\d{13}$',               # 13位时间戳
     r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',  # UUID
 ]
