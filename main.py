@@ -24,7 +24,12 @@ def cli():
 def capture(port, db):
     """启动代理捕获流量"""
     import signal
+    import asyncio
     from capture.proxy import start_proxy
+
+    # Windows 兼容性修复
+    if sys.platform == 'win32':
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     click.echo(f"启动代理服务器...")
     click.echo(f"监听地址: localhost:{port}")

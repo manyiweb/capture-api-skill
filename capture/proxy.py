@@ -74,8 +74,14 @@ class CaptureAddon:
 
 def start_proxy(db_path: str, port: int = 8080):
     """启动 mitmproxy"""
+    import asyncio
+    import sys
     from mitmproxy.tools.dump import DumpMaster
     from mitmproxy import options
+
+    # Windows 兼容性修复
+    if sys.platform == 'win32':
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     db = Database(db_path)
     addon = CaptureAddon(db)
