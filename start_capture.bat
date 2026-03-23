@@ -1,18 +1,30 @@
 @echo off
+chcp 65001 >nul
 REM API Capture 启动脚本 - Windows 版本
-REM 使用 mitmdump 命令行工具启动代理
+REM 使用 Python 模块方式运行 mitmdump
 
 echo ========================================
 echo   API Capture Skill - 代理启动
 echo ========================================
 echo.
 
-REM 检查 mitmdump 是否可用
-where mitmdump >nul 2>&1
+REM 检查 Python 是否可用
+python --version >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
-    echo [错误] 未找到 mitmdump 命令
+    echo [错误] 未找到 Python
     echo.
-    echo 请确保已安装 mitmproxy:
+    echo 请确保已安装 Python 3.9+
+    echo.
+    pause
+    exit /b 1
+)
+
+REM 检查 mitmproxy 是否已安装
+python -c "import mitmproxy" >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo [错误] 未找到 mitmproxy 模块
+    echo.
+    echo 请安装 mitmproxy:
     echo   pip install mitmproxy
     echo.
     pause
@@ -29,8 +41,8 @@ echo.
 echo ========================================
 echo.
 
-REM 启动 mitmdump
-mitmdump -s "%~dp0mitm_script.py" --listen-port 18527 --set block_global=false
+REM 使用 Python 模块方式启动 mitmdump
+python -m mitmproxy.tools.dump -s "%~dp0mitm_script.py" --listen-port 18527 --set block_global=false
 
 echo.
 echo [信息] 代理已停止
