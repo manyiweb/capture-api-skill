@@ -55,7 +55,7 @@ class CaptureAddon:
         response_body = self._parse_body(response.content, response.headers.get('Content-Type', ''))
 
         # 解析查询参数
-        query_params = {k: v for k, v in request.query.fields}
+        query_params = self._parse_query(request.query.fields)
 
         return {
             'method': request.method,
@@ -63,8 +63,10 @@ class CaptureAddon:
             'path': request.path.split('?')[0],
             'query_params': json.dumps(query_params, ensure_ascii=False),
             'request_body': json.dumps(request_body, ensure_ascii=False) if isinstance(request_body, (dict, list)) else str(request_body),
+            'request_headers': json.dumps(dict(request.headers.items()), ensure_ascii=False),
             'response_code': response.status_code,
             'response_body': json.dumps(response_body, ensure_ascii=False) if isinstance(response_body, (dict, list)) else str(response_body),
+            'response_headers': json.dumps(dict(response.headers.items()), ensure_ascii=False),
         }
 
     def _parse_body(self, content: bytes, content_type: str):
@@ -89,6 +91,19 @@ class CaptureAddon:
                 pass
 
         return text
+
+    @staticmethod
+    def _parse_query(fields):
+        """保留重复 query key。"""
+        result = {}
+        for key, value in fields:
+            if key not in result:
+                result[key] = value
+            elif isinstance(result[key], list):
+                result[key].append(value)
+            else:
+                result[key] = [result[key], value]
+        return result
 
 
 # mitmproxy 会自动加载这个 addon

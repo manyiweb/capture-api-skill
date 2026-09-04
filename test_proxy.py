@@ -4,6 +4,9 @@
 import sys
 import socket
 
+# 这是需要人工连接和 Ctrl+C 结束的诊断服务器，不应被 pytest 自动收集。
+__test__ = False
+
 def test_proxy(port=18527):
     """测试代理服务器启动"""
     print(f"[1] 创建 socket...")

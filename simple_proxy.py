@@ -10,7 +10,7 @@ import socket
 import threading
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 import requests
 
 # 添加项目路径
@@ -50,11 +50,13 @@ class ProxyHandler(BaseHTTPRequestHandler):
 
             # 创建模拟的 request 对象用于过滤
             class MockRequest:
-                def __init__(self, url, path):
+                def __init__(self, url, path, method, headers):
                     self.url = url
                     self.path = path
+                    self.method = method
+                    self.headers = headers
 
-            mock_req = MockRequest(url, urlparse(url).path)
+            mock_req = MockRequest(url, urlparse(url).path, method, self.headers)
 
             # 转发请求
             headers = {k: v for k, v in self.headers.items()
@@ -110,10 +112,18 @@ class ProxyHandler(BaseHTTPRequestHandler):
                 'method': method,
                 'url': url,
                 'path': parsed.path,
-                'query_params': json.dumps(dict(parsed.query)) if parsed.query else '{}',
+                'query_params': json.dumps(
+                    {
+                        key: values[0] if len(values) == 1 else values
+                        for key, values in parse_qs(parsed.query, keep_blank_values=True).items()
+                    },
+                    ensure_ascii=False,
+                ),
                 'request_body': req_body_str,
+                'request_headers': json.dumps(dict(self.headers.items()), ensure_ascii=False),
                 'response_code': response.status_code,
                 'response_body': resp_body_str,
+                'response_headers': json.dumps(dict(response.headers), ensure_ascii=False),
             }
 
             self.server.db.save_or_update(data)

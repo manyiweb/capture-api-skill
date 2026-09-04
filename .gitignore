@@ -6,6 +6,7 @@ __pycache__/
 .Python
 
 # Virtual environments
+.venv/
 venv/
 env/
 ENV/
@@ -22,8 +23,7 @@ capture.db
 
 # Output
 tests/output/
-output/*.py
-output/*.yaml
+output/**
 !output/.gitkeep
 
 # Logs
@@ -32,6 +32,10 @@ output/*.yaml
 # Environment variables
 .env
 .env.*
+
+# Optional local browser profiles
+.chrome-profile/
+.browser-profile/
 
 # macOS
 .DS_Store

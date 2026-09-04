@@ -4,6 +4,7 @@ from typing import List, Dict
 
 from generator.base import BaseGenerator
 from capture.filters import extract_dynamic_fields
+from generator.redaction import sensitive_field_config_name
 
 
 class DataGenerator(BaseGenerator):
@@ -25,10 +26,22 @@ class DataGenerator(BaseGenerator):
                 dynamic_fields = extract_dynamic_fields(body)
 
                 for key, value in body.items():
-                    if key in dynamic_fields:
+                    config_name = sensitive_field_config_name(
+                        key,
+                        record.get('path', ''),
+                        value,
+                    )
+                    if config_name:
+                        lines.append(f'  {key}: "${{config({config_name})}}"')
+                    elif key in dynamic_fields:
                         lines.append(f'  {key}: "DYNAMIC"')
                     else:
-                        lines.append(f'  {key}: {json.dumps(value)}')
+                        sanitized = self._sanitize_nested(
+                            value,
+                            record.get('path', ''),
+                            prefix=key,
+                        )
+                        lines.append(f'  {key}: {json.dumps(sanitized)}')
             except:
                 lines.append('  # 解析失败')
 
@@ -36,3 +49,17 @@ class DataGenerator(BaseGenerator):
 
         file_path.write_text('\n'.join(lines), encoding='utf-8')
         return [file_path]
+
+    def _sanitize_nested(self, value, path: str, prefix: str = ''):
+        if isinstance(value, dict):
+            result = {}
+            for key, child in value.items():
+                config_name = sensitive_field_config_name(key, path, child)
+                if config_name:
+                    result[key] = f"${{config({config_name})}}"
+                else:
+                    result[key] = self._sanitize_nested(child, path, f'{prefix}.{key}')
+            return result
+        if isinstance(value, list):
+            return [self._sanitize_nested(item, path, prefix) for item in value]
+        return value

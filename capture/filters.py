@@ -1,9 +1,28 @@
 import re
-from typing import Any
-from config import EXCLUDED_EXTENSIONS, EXCLUDED_PATHS, EXCLUDED_KEYWORDS, DYNAMIC_FIELD_PATTERNS
+from typing import Any, Iterable
+from urllib.parse import urlsplit
+
+from config import (
+    DYNAMIC_FIELD_PATTERNS,
+    EXCLUDED_EXTENSIONS,
+    EXCLUDED_HOST_SUFFIXES,
+    EXCLUDED_KEYWORDS,
+    EXCLUDED_PATHS,
+)
 
 
-def should_capture(request) -> bool:
+def _host_matches(hostname: str, rule: str) -> bool:
+    normalized_rule = rule.strip().lower().lstrip('.')
+    return bool(normalized_rule) and (
+        hostname == normalized_rule or hostname.endswith(f'.{normalized_rule}')
+    )
+
+
+def should_capture(
+    request,
+    include_hosts: Iterable[str] = (),
+    api_only: bool = True,
+) -> bool:
     """
     判断是否应该捕获该请求
 
@@ -15,9 +34,35 @@ def should_capture(request) -> bool:
     """
     url = request.url
     path = request.path
+    method = str(getattr(request, 'method', '')).upper()
+    hostname = (urlsplit(url).hostname or '').lower()
+
+    # CORS 预检不是业务 API 用例的一部分。
+    if method in {'OPTIONS', 'HEAD'}:
+        return False
+
+    include_hosts = tuple(include_hosts)
+    if include_hosts:
+        if not any(_host_matches(hostname, rule) for rule in include_hosts):
+            return False
+    elif any(_host_matches(hostname, suffix) for suffix in EXCLUDED_HOST_SUFFIXES):
+        return False
+
+    # 浏览器 XHR/fetch 的 Sec-Fetch-Dest 通常为 empty。排除 document、script、
+    # image 等页面资源；缺少该请求头时保留，兼容非浏览器 HTTP 客户端。
+    headers = getattr(request, 'headers', {})
+    fetch_dest = ''
+    if hasattr(headers, 'items'):
+        fetch_dest = next(
+            (value for key, value in headers.items() if str(key).lower() == 'sec-fetch-dest'),
+            '',
+        )
+    if api_only and fetch_dest and fetch_dest.lower() != 'empty':
+        return False
 
     # 排除静态资源
-    if any(url.endswith(ext) for ext in EXCLUDED_EXTENSIONS):
+    url_path = urlsplit(url).path.lower()
+    if any(url_path.endswith(ext) for ext in EXCLUDED_EXTENSIONS):
         return False
 
     # 排除特定路径

@@ -1,5 +1,5 @@
 import json
-from typing import Dict, Any
+from typing import Dict, Any, Iterable
 from mitmproxy import http
 
 from storage.db import Database
@@ -9,13 +9,24 @@ from capture.filters import should_capture
 class CaptureAddon:
     """mitmproxy addon，用于捕获 HTTP 流量"""
 
-    def __init__(self, db: Database):
+    def __init__(
+        self,
+        db: Database,
+        include_hosts: Iterable[str] = (),
+        api_only: bool = True,
+    ):
         self.db = db
+        self.include_hosts = tuple(include_hosts)
+        self.api_only = api_only
 
     def response(self, flow: http.HTTPFlow):
         """响应时捕获数据"""
         # 检查是否应该捕获
-        if not should_capture(flow.request):
+        if not should_capture(
+            flow.request,
+            include_hosts=self.include_hosts,
+            api_only=self.api_only,
+        ):
             return
 
         # 提取请求数据
@@ -36,7 +47,7 @@ class CaptureAddon:
         response_body = self._parse_body(response.content, response.headers.get('Content-Type', ''))
 
         # 解析查询参数
-        query_params = {k: v for k, v in request.query.fields}
+        query_params = self._parse_query(request.query.fields)
 
         return {
             'method': request.method,
@@ -44,8 +55,10 @@ class CaptureAddon:
             'path': request.path.split('?')[0],
             'query_params': json.dumps(query_params, ensure_ascii=False),
             'request_body': json.dumps(request_body, ensure_ascii=False) if isinstance(request_body, (dict, list)) else str(request_body),
+            'request_headers': json.dumps(dict(request.headers.items()), ensure_ascii=False),
             'response_code': response.status_code,
             'response_body': json.dumps(response_body, ensure_ascii=False) if isinstance(response_body, (dict, list)) else str(response_body),
+            'response_headers': json.dumps(dict(response.headers.items()), ensure_ascii=False),
         }
 
     def _parse_body(self, content: bytes, content_type: str) -> Any:
@@ -71,8 +84,26 @@ class CaptureAddon:
 
         return text
 
+    @staticmethod
+    def _parse_query(fields) -> Dict[str, Any]:
+        """保留重复 query key，避免浏览器请求信息在捕获时丢失。"""
+        result: Dict[str, Any] = {}
+        for key, value in fields:
+            if key not in result:
+                result[key] = value
+            elif isinstance(result[key], list):
+                result[key].append(value)
+            else:
+                result[key] = [result[key], value]
+        return result
 
-def start_proxy(db_path: str, port: int = 8080):
+
+def start_proxy(
+    db_path: str,
+    port: int = 18527,
+    include_hosts: Iterable[str] = (),
+    api_only: bool = True,
+):
     """启动 mitmproxy"""
     import asyncio
     import sys
@@ -84,7 +115,7 @@ def start_proxy(db_path: str, port: int = 8080):
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     db = Database(db_path)
-    addon = CaptureAddon(db)
+    addon = CaptureAddon(db, include_hosts=include_hosts, api_only=api_only)
 
     opts = options.Options(
         listen_host='0.0.0.0',

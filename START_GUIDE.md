@@ -41,7 +41,7 @@ chmod +x start_capture.sh
 
 ```powershell
 cd D:\capture-api-skill
-mitmdump -s mitm_script.py --listen-port 8080
+mitmdump -s mitm_script.py --listen-port 18527
 ```
 
 ---
@@ -90,7 +90,23 @@ mitmdump -s mitm_script.py --listen-port 8080
 
 ## 捕获流量
 
-配置好代理后：
+TM 场景建议先在项目虚拟环境中启动仅限 TrackingMore 域名的代理：
+
+```bash
+python main.py capture --include-host trackingmore.com
+```
+
+该命令默认清空上一次捕获，避免 Review 页面混入旧链路。确需保留历史数据时
+增加 `--keep-existing`。
+
+然后在另一个终端启动隔离的测试 Chrome：
+
+```bash
+python main.py browser --url <TM后台地址> --proxy-port 18527
+```
+
+该实例使用临时 Profile，代理参数不会修改日常 Chrome；关闭后自动清理。然后：
+
 1. 访问你的 Web 系统
 2. 正常操作（登录、下单等）
 3. 终端会实时显示捕获的请求：
@@ -117,7 +133,7 @@ cd D:\capture-api-skill
 python main.py review
 ```
 
-然后访问 `http://localhost:8888` 进行筛选和生成。
+然后访问 `http://localhost:18528` 进行筛选和生成。
 
 ---
 
@@ -130,11 +146,11 @@ python main.py review
 pip install mitmproxy
 ```
 
-### 问题 2: 端口 8080 被占用
+### 问题 2: 端口 18527 被占用
 
 **解决方案**：使用其他端口
 ```powershell
-mitmdump -s mitm_script.py --listen-port 8081
+mitmdump -s mitm_script.py --listen-port 18529
 ```
 
 ### 问题 3: 浏览器无法访问网站
@@ -153,7 +169,10 @@ mitmdump -s mitm_script.py --listen-port 8081
 cd D:\capture-api-skill
 .\start_capture.bat
 
-# 2. 配置浏览器代理为 localhost:8080
+# 2. 配置浏览器代理为 localhost:18527
+
+# 推荐：也可以另开终端，让工具启动独立测试 Chrome
+python main.py browser --url <TM后台地址> --proxy-port 18527
 
 # 3. 操作 Web 系统，观察终端输出
 
@@ -162,7 +181,7 @@ cd D:\capture-api-skill
 # 5. 启动 Web UI（同一终端）
 python main.py review
 
-# 6. 浏览器访问 http://localhost:8888
+# 6. 浏览器访问 http://localhost:18528
 
 # 7. 勾选接口，点击"生成用例"
 
@@ -170,6 +189,7 @@ python main.py review
 dir output\api
 dir output\data
 dir output\case
+dir output\lounger
 ```
 
 ---

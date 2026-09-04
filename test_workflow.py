@@ -12,7 +12,7 @@ import tempfile
 from pathlib import Path
 import os
 
-def test_full_workflow():
+def run_full_workflow():
     """测试完整工作流程"""
     print("=== API Capture Skill 功能测试 ===\n")
 
@@ -121,5 +121,5 @@ def test_full_workflow():
             os.unlink(db_path)
 
 if __name__ == '__main__':
-    success = test_full_workflow()
+    success = run_full_workflow()
     exit(0 if success else 1)

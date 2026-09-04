@@ -8,7 +8,7 @@ import json
 import select
 import socket
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 # 添加项目路径
 BASE_DIR = Path(__file__).parent
@@ -176,14 +176,24 @@ class SimpleProxy:
     def capture_request(self, method, url, request_data, response_data):
         """捕获请求数据"""
         try:
+            req_headers = {}
+            if b'\r\n\r\n' in request_data:
+                raw_headers, _ = request_data.split(b'\r\n\r\n', 1)
+                for line in raw_headers.decode('utf-8', errors='ignore').split('\r\n')[1:]:
+                    if ':' in line:
+                        key, value = line.split(':', 1)
+                        req_headers[key.strip()] = value.strip()
+
             # 创建模拟的 request 对象用于过滤
             class MockRequest:
-                def __init__(self, url, path):
+                def __init__(self, url, path, method, headers):
                     self.url = url
                     self.path = path
+                    self.method = method
+                    self.headers = headers
 
             parsed = urlparse(url)
-            mock_req = MockRequest(url, parsed.path)
+            mock_req = MockRequest(url, parsed.path, method, req_headers)
 
             if not should_capture(mock_req):
                 return
@@ -191,18 +201,25 @@ class SimpleProxy:
             # 解析请求体
             req_body = ''
             if b'\r\n\r\n' in request_data:
-                req_body = request_data.split(b'\r\n\r\n', 1)[1].decode('utf-8', errors='ignore')
+                _, raw_body = request_data.split(b'\r\n\r\n', 1)
+                req_body = raw_body.decode('utf-8', errors='ignore')
 
             # 解析响应
             resp_code = 0
             resp_body = ''
+            resp_headers = {}
             if response_data:
                 try:
                     status_line = response_data.split(b'\r\n')[0].decode('utf-8', errors='ignore')
                     resp_code = int(status_line.split(' ')[1])
 
                     if b'\r\n\r\n' in response_data:
-                        resp_body = response_data.split(b'\r\n\r\n', 1)[1].decode('utf-8', errors='ignore')
+                        raw_headers, raw_body = response_data.split(b'\r\n\r\n', 1)
+                        resp_body = raw_body.decode('utf-8', errors='ignore')
+                        for line in raw_headers.decode('utf-8', errors='ignore').split('\r\n')[1:]:
+                            if ':' in line:
+                                key, value = line.split(':', 1)
+                                resp_headers[key.strip()] = value.strip()
                 except:
                     pass
 
@@ -210,10 +227,18 @@ class SimpleProxy:
                 'method': method,
                 'url': url,
                 'path': parsed.path,
-                'query_params': json.dumps(dict(parsed.query)) if parsed.query else '{}',
+                'query_params': json.dumps(
+                    {
+                        key: values[0] if len(values) == 1 else values
+                        for key, values in parse_qs(parsed.query, keep_blank_values=True).items()
+                    },
+                    ensure_ascii=False,
+                ),
                 'request_body': req_body,
+                'request_headers': json.dumps(req_headers, ensure_ascii=False),
                 'response_code': resp_code,
                 'response_body': resp_body[:10000],  # 限制大小
+                'response_headers': json.dumps(resp_headers, ensure_ascii=False),
             }
 
             self.db.save_or_update(data)
