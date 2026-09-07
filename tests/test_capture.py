@@ -8,6 +8,8 @@ class TestFilters:
         class MockRequest:
             url = 'http://example.com/api/order/list'
             path = '/api/order/list'
+            method = 'POST'
+            headers = {'Sec-Fetch-Dest': 'empty'}
 
         assert should_capture(MockRequest()) is True
 
@@ -16,6 +18,8 @@ class TestFilters:
         class MockRequest:
             url = 'http://example.com/static/app.js'
             path = '/static/app.js'
+            method = 'GET'
+            headers = {'Sec-Fetch-Dest': 'script'}
 
         assert should_capture(MockRequest()) is False
 
@@ -24,6 +28,8 @@ class TestFilters:
         class MockRequest:
             url = 'http://example.com/health'
             path = '/health'
+            method = 'GET'
+            headers = {'Sec-Fetch-Dest': 'empty'}
 
         assert should_capture(MockRequest()) is False
 
@@ -32,8 +38,63 @@ class TestFilters:
         class MockRequest:
             url = 'http://example.com/analytics/track'
             path = '/analytics/track'
+            method = 'POST'
+            headers = {'Sec-Fetch-Dest': 'empty'}
 
         assert should_capture(MockRequest()) is False
+
+    def test_should_exclude_cors_preflight(self):
+        class MockRequest:
+            url = 'https://api.example.com/v1/orders'
+            path = '/v1/orders'
+            method = 'OPTIONS'
+            headers = {'Sec-Fetch-Dest': 'empty'}
+
+        assert should_capture(MockRequest()) is False
+
+    def test_should_exclude_page_resources_in_api_only_mode(self):
+        class MockRequest:
+            url = 'https://app.example.com/home'
+            path = '/home'
+            method = 'GET'
+            headers = {'Sec-Fetch-Dest': 'document'}
+
+        assert should_capture(MockRequest()) is False
+        assert should_capture(MockRequest(), api_only=False) is True
+
+    def test_fetch_destination_header_is_case_insensitive(self):
+        class MockRequest:
+            url = 'https://app.example.com/home'
+            path = '/home'
+            method = 'GET'
+            headers = {'sec-fetch-dest': 'document'}
+
+        assert should_capture(MockRequest()) is False
+
+    def test_should_capture_only_matching_host(self):
+        class ApiRequest:
+            url = 'https://develop-gcp-adminapi.trackingmore.com/v1/shipments/list'
+            path = '/v1/shipments/list'
+            method = 'POST'
+            headers = {'Sec-Fetch-Dest': 'empty'}
+
+        class ThirdPartyRequest:
+            url = 'https://example.com/v1/events'
+            path = '/v1/events'
+            method = 'POST'
+            headers = {'Sec-Fetch-Dest': 'empty'}
+
+        assert should_capture(ApiRequest(), include_hosts=['trackingmore.com']) is True
+        assert should_capture(ThirdPartyRequest(), include_hosts=['trackingmore.com']) is False
+
+    def test_tracking_api_path_is_not_mistaken_for_analytics(self):
+        class MockRequest:
+            url = 'https://api.example.com/api/tracking/create'
+            path = '/api/tracking/create'
+            method = 'POST'
+            headers = {'Sec-Fetch-Dest': 'empty'}
+
+        assert should_capture(MockRequest()) is True
 
 
 class TestDynamicFieldDetection:

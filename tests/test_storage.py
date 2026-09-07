@@ -21,8 +21,10 @@ TEST_DATA = {
     'path': '/api/test',
     'query_params': '{}',
     'request_body': '{"key": "value"}',
+    'request_headers': '{"Authorization": "Bearer token"}',
     'response_code': 200,
     'response_body': '{"success": true}',
+    'response_headers': '{"Content-Type": "application/json"}',
 }
 
 
@@ -42,7 +44,7 @@ class TestDatabase:
         expected_columns = {
             'id', 'timestamp', 'method', 'url', 'path',
             'query_params', 'request_body', 'response_code',
-            'response_body', 'selected'
+            'response_body', 'request_headers', 'response_headers', 'selected'
         }
         assert expected_columns.issubset(columns), (
             f"Missing columns: {expected_columns - columns}"
@@ -59,9 +61,42 @@ class TestDatabase:
         assert record['path'] == '/api/test'
         assert record['query_params'] == '{}'
         assert record['request_body'] == '{"key": "value"}'
+        assert record['request_headers'] == '{"Authorization": "Bearer token"}'
         assert record['response_code'] == 200
         assert record['response_body'] == '{"success": true}'
+        assert record['response_headers'] == '{"Content-Type": "application/json"}'
         assert record['selected'] == 0
+
+    def test_existing_database_is_migrated_with_header_columns(self):
+        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+            db_path = f.name
+        try:
+            import sqlite3
+
+            conn = sqlite3.connect(db_path)
+            conn.execute('''
+                CREATE TABLE captured_requests (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    method TEXT NOT NULL,
+                    url TEXT NOT NULL,
+                    path TEXT NOT NULL,
+                    query_params TEXT,
+                    request_body TEXT,
+                    response_code INTEGER,
+                    response_body TEXT,
+                    selected INTEGER DEFAULT 0
+                )
+            ''')
+            conn.commit()
+            conn.close()
+
+            migrated = Database(db_path)
+            columns = {row[1] for row in migrated.conn.execute('PRAGMA table_info(captured_requests)')}
+            migrated.close()
+            assert {'request_headers', 'response_headers'}.issubset(columns)
+        finally:
+            os.unlink(db_path)
 
     def test_deduplication(self, temp_db):
         """测试相同 path + body 去重（只保留最新）"""

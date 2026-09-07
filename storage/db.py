@@ -26,11 +26,19 @@ class Database:
                 path TEXT NOT NULL,
                 query_params TEXT,
                 request_body TEXT,
+                request_headers TEXT,
                 response_code INTEGER,
                 response_body TEXT,
+                response_headers TEXT,
                 selected INTEGER DEFAULT 0
             )
         ''')
+        # 兼容已有 capture.db：SQLite 的 CREATE TABLE IF NOT EXISTS 不会补列。
+        cursor.execute('PRAGMA table_info(captured_requests)')
+        existing_columns = {row[1] for row in cursor.fetchall()}
+        for column in ('request_headers', 'response_headers'):
+            if column not in existing_columns:
+                cursor.execute(f'ALTER TABLE captured_requests ADD COLUMN {column} TEXT')
         self.conn.commit()
 
     def save_or_update(self, data: Dict):
@@ -57,32 +65,39 @@ class Database:
                 SET method = ?,
                     url = ?,
                     query_params = ?,
+                    request_headers = ?,
                     response_code = ?,
                     response_body = ?,
+                    response_headers = ?,
                     timestamp = CURRENT_TIMESTAMP
                 WHERE id = ?
             ''', (
                 data.get('method', ''),
                 data.get('url', ''),
                 data.get('query_params'),
+                data.get('request_headers'),
                 data.get('response_code'),
                 data.get('response_body'),
+                data.get('response_headers'),
                 existing['id']
             ))
         else:
             # 插入新记录
             cursor.execute('''
                 INSERT INTO captured_requests
-                    (method, url, path, query_params, request_body, response_code, response_body)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                    (method, url, path, query_params, request_body, request_headers,
+                     response_code, response_body, response_headers)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data.get('method', ''),
                 data.get('url', ''),
                 path,
                 data.get('query_params'),
                 request_body,
+                data.get('request_headers'),
                 data.get('response_code'),
                 data.get('response_body'),
+                data.get('response_headers'),
             ))
 
         self.conn.commit()
@@ -135,10 +150,10 @@ class Database:
         self.conn.commit()
 
     def get_selected(self) -> List[Dict]:
-        """获取所有选中的记录"""
+        """按实际捕获顺序获取所有选中的记录，用于还原业务场景。"""
         cursor = self.conn.cursor()
         cursor.execute(
-            'SELECT * FROM captured_requests WHERE selected = 1 ORDER BY timestamp DESC'
+            'SELECT * FROM captured_requests WHERE selected = 1 ORDER BY id ASC'
         )
         rows = cursor.fetchall()
         return [dict(row) for row in rows]

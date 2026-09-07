@@ -12,11 +12,26 @@ DEFAULT_WEB_PORT = 18528     # Web UI 端口
 API_OUTPUT_DIR = OUTPUT_DIR / "api"
 DATA_OUTPUT_DIR = OUTPUT_DIR / "data"
 CASE_OUTPUT_DIR = OUTPUT_DIR / "case"
+LOUNGER_OUTPUT_DIR = OUTPUT_DIR / "lounger"
 
 # 过滤配置
-EXCLUDED_EXTENSIONS = {'.js', '.css', '.png', '.jpg', '.gif', '.ico', '.woff', '.svg', '.woff2'}
+EXCLUDED_EXTENSIONS = {
+    '.js', '.css', '.map', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif',
+    '.ico', '.woff', '.woff2', '.svg',
+}
 EXCLUDED_PATHS = {'/health', '/ping', '/actuator', '/ready'}
-EXCLUDED_KEYWORDS = {'analytics', 'sentry', 'track', 'log', 'metrics'}
+EXCLUDED_KEYWORDS = {
+    'analytics', 'sentry', 'metrics', 'posthog',
+    '/g/collect', '/ccm/', '/wa/', '/domainreliability/',
+    '/data-reporting/', '/cdn-cgi/challenge-platform/',
+}
+EXCLUDED_HOST_SUFFIXES = {
+    'doubleclick.net', 'googletagmanager.com', 'google-analytics.com',
+    'posthog.com', 'clarity.ms', 'linkedin.com', 'ahrefs.com',
+    'intercom.io', 'getbeamer.com', 'hubapi.com',
+    'hscollectedforms.net', 'lfeeder.com',
+    'google.com', 'googleapis.com', 'gstatic.com', 'gvt2.com',
+}
 
 # 动态值识别
 DYNAMIC_FIELD_PATTERNS = [
